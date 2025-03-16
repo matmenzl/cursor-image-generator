@@ -1,48 +1,112 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function Home() {
+  const [prompt, setPrompt] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string>("");
+
+  const generateImage = async () => {
+    if (!prompt) return;
+
+    setLoading(true);
+    setError(null);
+    setProgress("Starte Bildgenerierung...");
+
+    try {
+      const response = await fetch("/api/fal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Fehler bei der API-Anfrage");
+      }
+
+      const result = await response.json();
+      console.log("API Antwort:", result);
+
+      if (!result.data?.images) {
+        console.error("Keine Bilder in der Antwort gefunden:", JSON.stringify(result, null, 2));
+        throw new Error("Keine Bilder in der Antwort gefunden");
+      }
+
+      const newImages = result.data.images.map((img: any) => img.url);
+      console.log("Generierte Bild-URLs:", newImages);
+      setImages(newImages);
+      setProgress("");
+
+    } catch (error: any) {
+      console.error("Bildgenerierung fehlgeschlagen:", error);
+      setError(error.message || "Ein unerwarteter Fehler ist aufgetreten");
+      setProgress("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-8">
-      <div>
-        <h2 className="text-2xl font-semibold text-center border p-4 font-mono rounded-md">
-          Get started by choosing a template path from the /paths/ folder.
-        </h2>
+    <div className="container mx-auto p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Text Area and Button */}
+        <Card className="p-4">
+          <textarea
+            className="w-full h-32 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Beschreibe das Bild, das du generieren möchtest"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+          <Button 
+            onClick={generateImage} 
+            className="w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white"
+            disabled={loading}
+          >
+            {loading ? "Generieren..." : "Bild erstellen"}
+          </Button>
+          {progress && (
+            <div className="mt-4 p-4 bg-blue-50 text-blue-600 rounded-lg">
+              {progress}
+            </div>
+          )}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg">
+              {error}
+            </div>
+          )}
+        </Card>
+
+        {/* Image Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          {Array(4).fill(null).map((_, index) => (
+            <Card key={index} className="overflow-hidden">
+              <CardContent className="p-0">
+                {images[index] ? (
+                  <Image
+                    src={images[index]}
+                    alt={`Generiertes Bild ${index + 1}`}
+                    width={512}
+                    height={512}
+                    className="w-full h-48 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                    <span className="text-gray-400">Bild {index + 1}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-      <div>
-        <h1 className="text-6xl font-bold text-center">Make anything you imagine 🪄</h1>
-        <h2 className="text-2xl text-center font-light text-gray-500 pt-4">
-          This whole page will be replaced when you run your template path.
-        </h2>
-      </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Chat App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            An intelligent conversational app powered by AI models, featuring real-time responses
-            and seamless integration with Next.js and various AI providers.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Image Generation App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            Create images from text prompts using AI, powered by the Replicate API and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Social Media App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A feature-rich social platform with user profiles, posts, and interactions using
-            Firebase and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Voice Notes App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A voice-based note-taking app with real-time transcription using Deepgram API, 
-            Firebase integration for storage, and a clean, simple interface built with Next.js.
-          </p>
-        </div>
-      </div>
-    </main>
+    </div>
   );
 }

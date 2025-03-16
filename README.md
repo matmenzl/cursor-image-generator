@@ -1,15 +1,52 @@
-# Ansh & Riley Full-Stack Template
+# AI Image Generator
 
-This is a full-stack template project for Software Composers to create  applications with AI.
+Eine moderne Webanwendung zur KI-gestützten Bildgenerierung mit Next.js 14 und FAL.ai.
 
-## Getting started
-To create a new project, you go to `/paths`, choose from our list of Paths, and then use Cursor's Composer feature to quickly scaffold your project!
+## Features
 
-You can also edit the Path's prompt template to be whatever you like!
+- Bildgenerierung mit FAL.ai's Flux Pro Modell
+- Moderne UI mit Tailwind CSS
+- Echtzeit-Statusupdates
+- Responsive Design
+- Sichere API-Key-Handhabung
 
-## Technologies used
-This doesn't really matter, but is useful for the AI to understand more about this project. We are using the following technologies
-- React with Next.js 14 App Router
-- TailwindCSS
-- Firebase Auth, Storage, and Database
-- Multiple AI endpoints including OpenAI, Anthropic, and Replicate using Vercel's AI SDK
+## Installation
+
+1. Repository klonen:
+```bash
+git clone [repository-url]
+cd [repository-name]
+```
+
+2. Dependencies installieren:
+```bash
+npm install
+```
+
+3. Umgebungsvariablen einrichten:
+   - Erstelle eine `.env.local` Datei im Root-Verzeichnis
+   - Füge deinen FAL.ai API-Key hinzu:
+```bash
+FAL_API_KEY="dein-fal-api-key"
+```
+
+4. Development Server starten:
+```bash
+npm run dev
+```
+
+Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) verfügbar.
+
+## Umgebungsvariablen
+
+Die folgenden Umgebungsvariablen müssen in `.env.local` gesetzt werden:
+
+- `FAL_API_KEY`: Dein FAL.ai API-Key (erforderlich)
+
+## Technologie-Stack
+
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+- FAL.ai API
