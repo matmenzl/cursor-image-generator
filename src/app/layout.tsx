@@ -6,16 +6,16 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "AI Image Generator",
-  description: "Ein KI-basierter Bildgenerator mit FAL.ai",
+  description: "Generate images using AI",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="de">
+    <html lang="en">
       <body className={inter.className}>{children}</body>
     </html>
   );

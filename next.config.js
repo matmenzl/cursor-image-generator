@@ -4,12 +4,16 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'v3.fal.media',
+        pathname: '/files/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'fal.media',
-        port: '',
         pathname: '/files/**',
       },
     ],
   },
-}
+};
 
-module.exports = nextConfig 
+module.exports = nextConfig; 

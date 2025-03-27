@@ -4,20 +4,29 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<string>("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const [url, setUrl] = useState('');
+  const router = useRouter();
 
   const generateImage = async () => {
-    if (!prompt) return;
+    if (!prompt.trim()) {
+      setError("Bitte geben Sie einen Text ein");
+      return;
+    }
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    setProgress("Starte Bildgenerierung...");
+    setStatus("Sende Anfrage...");
 
     try {
       const response = await fetch("/api/fal", {
@@ -28,29 +37,58 @@ export default function Home() {
         body: JSON.stringify({ prompt }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Fehler bei der API-Anfrage");
+        throw new Error(data.error || 'Ein Fehler ist aufgetreten');
       }
 
-      const result = await response.json();
-      console.log("API Antwort:", result);
-
-      if (!result.data?.images) {
-        console.error("Keine Bilder in der Antwort gefunden:", JSON.stringify(result, null, 2));
-        throw new Error("Keine Bilder in der Antwort gefunden");
+      if (!data.images || !Array.isArray(data.images)) {
+        throw new Error("Ungültiges Antwortformat vom Server");
       }
 
-      const newImages = result.data.images.map((img: any) => img.url);
-      console.log("Generierte Bild-URLs:", newImages);
-      setImages(newImages);
-      setProgress("");
+      // Filtere ungültige URLs heraus
+      const validImages = data.images.filter((url: string) => url && typeof url === 'string' && url.length > 0);
+      
+      if (validImages.length === 0) {
+        throw new Error("Keine gültigen Bilder erhalten");
+      }
 
-    } catch (error: any) {
-      console.error("Bildgenerierung fehlgeschlagen:", error);
-      setError(error.message || "Ein unerwarteter Fehler ist aufgetreten");
-      setProgress("");
+      setImages(validImages);
+      setStatus(null);
+    } catch (err) {
+      console.error("Fehler:", err);
+      setError(err instanceof Error ? err.message : "Ein unerwarteter Fehler ist aufgetreten");
+      setStatus(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/process-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler bei der Verarbeitung der URL');
+      }
+
+      const data = await response.json();
+      router.push(`/quiz/${data.quizId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,17 +102,18 @@ export default function Home() {
             placeholder="Beschreibe das Bild, das du generieren möchtest"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            disabled={isLoading}
           />
           <Button 
             onClick={generateImage} 
             className="w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white"
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? "Generieren..." : "Bild erstellen"}
+            {isLoading ? "Generieren..." : "Bild erstellen"}
           </Button>
-          {progress && (
+          {status && (
             <div className="mt-4 p-4 bg-blue-50 text-blue-600 rounded-lg">
-              {progress}
+              {status}
             </div>
           )}
           {error && (
@@ -86,25 +125,30 @@ export default function Home() {
 
         {/* Image Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {Array(4).fill(null).map((_, index) => (
-            <Card key={index} className="overflow-hidden">
-              <CardContent className="p-0">
-                {images[index] ? (
-                  <Image
-                    src={images[index]}
-                    alt={`Generiertes Bild ${index + 1}`}
-                    width={512}
-                    height={512}
-                    className="w-full h-48 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                    <span className="text-gray-400">Bild {index + 1}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {isLoading ? (
+            Array(4)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-square bg-gray-200 rounded-lg animate-pulse"
+                />
+              ))
+          ) : images.length > 0 ? (
+            images.map((url, i) => (
+              <div key={i} className="relative aspect-square">
+                <Image
+                  src={url}
+                  alt={`Generiertes Bild ${i + 1}`}
+                  fill
+                  className="rounded-lg object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  priority={i < 2}
+                  unoptimized
+                />
+              </div>
+            ))
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,31 +1,52 @@
-import { fal } from "@fal-ai/client";
-import { NextResponse } from "next/server";
-
-if (!process.env.FAL_API_KEY) {
-  throw new Error("FAL_API_KEY ist nicht in den Umgebungsvariablen definiert");
-}
+import { NextResponse } from 'next/server';
+import { fal } from '@fal-ai/client';
 
 fal.config({
-  credentials: process.env.FAL_API_KEY
+  credentials: process.env.FAL_API_KEY,
 });
 
 export async function POST(request: Request) {
   try {
     const { prompt } = await request.json();
 
-    const result = await fal.subscribe("fal-ai/flux-pro/v1.1-ultra", {
+    if (!prompt) {
+      return NextResponse.json(
+        { error: "Prompt ist erforderlich" },
+        { status: 400 }
+      );
+    }
+
+    if (!process.env.FAL_API_KEY) {
+      return NextResponse.json(
+        { error: "FAL API Key nicht konfiguriert" },
+        { status: 500 }
+      );
+    }
+
+    console.log("Sende Anfrage an FAL.ai mit Prompt:", prompt);
+
+    const result = await fal.subscribe("fal-ai/fast-sdxl", {
       input: {
         prompt,
-        num_images: 4,
-        enable_safety_checker: true,
-        safety_tolerance: "2",
-        output_format: "jpeg",
-        aspect_ratio: "1:1",
-        raw: false
+        image_size: "square_hd",
+        num_images: 4
       },
     });
 
-    return NextResponse.json(result);
+    console.log("Queue Update:", JSON.stringify(result, null, 2));
+
+    if (!result || !result.data) {
+      throw new Error("Keine Daten in der Antwort");
+    }
+
+    // Extrahiere die URLs aus den Bildobjekten
+    const imageUrls = result.data.images.map((image: any) => image.url);
+
+    if (!imageUrls || imageUrls.length === 0) {
+      throw new Error("Keine gültigen Bild-URLs gefunden");
+    }
+
+    return NextResponse.json({ images: imageUrls });
   } catch (error) {
     console.error("Fehler bei der Bildgenerierung:", error);
     return NextResponse.json(
